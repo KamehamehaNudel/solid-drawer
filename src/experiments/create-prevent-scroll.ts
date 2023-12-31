@@ -1,4 +1,9 @@
 /*!
+ * Copy from kobalte/core to test adjustments to logic locally
+ * https://github.com/kobaltedev/kobalte/
+ */
+
+/*!
  * Portions of this file are based on code from floating-ui.
  * MIT Licensed, Copyright (c) 2021 Floating UI contributors.
  *

@@ -1,3 +1,7 @@
+/*!
+ * (solid js modified) copy of react/aria prevent scroll logic https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/overlays/src/usePreventScroll.ts
+ */
+
 import {Accessor, createEffect, onCleanup} from "solid-js";
 
 interface PreventScrollOptions {

@@ -6,20 +6,15 @@
 
 [![pnpm](https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg?style=for-the-badge&logo=pnpm)](https://pnpm.io/)
 
-{{desc_of_lib}}
+This library is a port of https://github.com/emilkowalski/vaul for solid JS.\
+Instead of radix it is built on top of the kobalte https://github.com/kobaltedev/kobalte/ libraries dialog component.\
+The "vaul" library has been modified to utilize solids fine grained reactivity vs. relying on direct style-manipulation of a ref.
 
-> **Note** After using this template, you have to search and replace all `solid-drawer` and similar strings
-> with appropriate texts.
->
-> `solid-drawer` should be a **kebab-case** string representing the name of you monorepo.
->
-> `{{desc_of_lib}}` should be a **Normal case** string with the description of the repository.
->
-> `KamehamehaNudel` should be a **kebab-case** string from your profile URL.
+
 
 ## Quick start
 
-Install it:
+Install it: (not actually published as of now as of now)
 
 ```bash
 npm i solid-drawer
