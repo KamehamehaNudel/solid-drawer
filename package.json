@@ -41,7 +41,7 @@
   },
   "typesVersions": {},
   "scripts": {
-    "dev": "vite serve dev",
+    "dev": "vite serve dev --host",
     "build": "tsup",
     "test": "concurrently pnpm:test:*",
     "test:client": "vitest",
@@ -54,9 +54,13 @@
     "update-deps": "pnpm up -Li"
   },
   "peerDependencies": {
-    "solid-js": "^1.6.0"
+    "@kobalte/core": "^0.11.2",
+    "@kobalte/utils": "^0.9.0",
+    "solid-js": "^1.7.8"
   },
   "devDependencies": {
+    "@kobalte/core": "^0.11.2",
+    "@kobalte/utils": "^0.9.0",
     "@typescript-eslint/eslint-plugin": "^6.1.0",
     "@typescript-eslint/parser": "^6.1.0",
     "concurrently": "^8.2.0",
