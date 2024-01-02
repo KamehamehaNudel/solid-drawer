@@ -482,6 +482,10 @@ export function DrawerRoot(props: DrawerRootProps) {
       if (isIOS()) {
          window.addEventListener('touchend', () => (setIsAllowedToDrag(false)), {once: true});
       }
+
+      // Ensure we maintain correct pointer capture even when going outside of the drawer
+      (event.target as HTMLElement).setPointerCapture(event.pointerId);
+
       pointerStartY = event.clientY;
    }
 
