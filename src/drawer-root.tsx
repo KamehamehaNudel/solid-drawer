@@ -450,15 +450,9 @@ export function DrawerRoot(props: DrawerRootInterface) {
       if (isDragging()) {
 
          const drawerHeight = drawerRef()?.getBoundingClientRect().height || 0;
-         let dragDistance;
 
-         if ("clientY" in event) {
-            dragDistance = pointerStartY - event.clientY;
-         } else if ("touches" in event) {
-            dragDistance = pointerStartY - (event.touches?.[0]?.clientY || 0);
-         } else {
-            dragDistance = pointerStartY;
-         }
+         // @ts-ignore: should probably move this out of the function an into the event declaration directly
+         const dragDistance = pointerStartY - (event.clientY ||  event.touches?.[0]?.clientY || 0);
 
          const isDraggingDown = dragDistance > 0;
 
@@ -521,15 +515,8 @@ export function DrawerRoot(props: DrawerRootInterface) {
 
       if (dragStartTime === null || dragStartTime === undefined) return;
 
-      let y;
-
-      if ("clientY" in event) {
-         y = event.clientY;
-      } else if ("touches" in event) {
-         y =  (event.touches?.[0]?.clientY || 0);
-      } else {
-         y = 0;
-      }
+      // @ts-ignore: should probably move this out of the function an into the event declaration directly
+      const y = event.clientY || event.changedTouches?.[0]?.clientY;
 
       const timeTaken = dragEndTime.getTime() - dragStartTime.getTime();
       const distMoved = pointerStartY - y;
