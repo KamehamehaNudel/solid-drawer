@@ -28,6 +28,9 @@ export function DrawerOverlay(props: DialogOverlayProps) {
       } else {
          const range = drawerContext.fadeRange();
 
+         if (drawerContext.state() === 'exiting') {
+            return 0;
+         }
          if (hasSnapPoints()) {
             return getProgressBetweenPoints(drawerContext.snapPointsOffset(), drawerContext.state() === 'exiting' ? height : drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()] as number, range[0], range[1])
          }
