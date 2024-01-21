@@ -10,6 +10,12 @@ This library is a port of https://github.com/emilkowalski/vaul for solid JS.\
 Instead of radix it is built on top of the kobalte https://github.com/kobaltedev/kobalte/ libraries dialog component.\
 The "vaul" library has been modified to utilize solids fine grained reactivity vs. relying on direct style-manipulation of a ref.
 
+## Showcase
+
+
+
+https://github.com/KamehamehaNudel/solid-drawer/assets/46644843/d8855fe8-6a4c-4f12-9d31-5a8bec587be6
+
 
 
 ## Quick start
