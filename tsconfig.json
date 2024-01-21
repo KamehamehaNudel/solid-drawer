@@ -1,22 +1,40 @@
 {
-  "compilerOptions": {
-    "strict": true,
-    "target": "ESNext",
-    "module": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "noEmit": true,
-    "isolatedModules": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "noUncheckedIndexedAccess": true,
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
-    "types": [],
-    "baseUrl": "."
-  },
-  "exclude": ["node_modules", "dist", "./dev"]
+   "compilerOptions": {
+      "strict": true,
+      "target": "ESNext",
+      "module": "ESNext",
+      "lib": [
+         "DOM",
+         "DOM.Iterable",
+         "ESNext"
+      ],
+      "moduleResolution": "node",
+      "resolveJsonModule": true,
+      "esModuleInterop": true,
+      "noEmit": true,
+      "isolatedModules": true,
+      "skipLibCheck": true,
+      "allowSyntheticDefaultImports": true,
+      "forceConsistentCasingInFileNames": true,
+      "noUncheckedIndexedAccess": true,
+      "jsx": "preserve",
+      "jsxImportSource": "solid-js",
+      "baseUrl": ".",
+      "newLine": "LF",
+      "allowJs": false,
+      "noFallthroughCasesInSwitch": false,
+      "sourceMap": true,
+      "types": [
+         "solid-js",
+         "vite/client",
+         "node",
+         "jest",
+         "@testing-library/jest-dom"
+      ]
+   },
+   "exclude": [
+      "node_modules",
+      "dist",
+      "./dev"
+   ]
 }

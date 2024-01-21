@@ -123,11 +123,8 @@ export function createPreventScroll(props: PreventScrollProps) {
       const offsetTop = visualViewport?.offsetTop ?? 0;
 
       const restoreStyle = assignStyle(body, {
-        position: "fixed",
         overflow: "hidden",
-        top: `${-(scrollY - Math.floor(offsetTop))}px`,
-        left: `${-(scrollX - Math.floor(offsetLeft))}px`,
-        right: "0",
+        height: "100lvh",
         [paddingProperty]: `${scrollbarWidth}px`,
       });
 
@@ -137,7 +134,7 @@ export function createPreventScroll(props: PreventScrollProps) {
       };
     };
 
-    const cleanup = chain([setScrollbarWidthProperty(), isIOS() ? setIOSStyle() : setStyle()]);
+    const cleanup = chain([setScrollbarWidthProperty(), isIOS() ? setIOSStyle() : setIOSStyle()]);
 
     onCleanup(() => {
       cleanup();

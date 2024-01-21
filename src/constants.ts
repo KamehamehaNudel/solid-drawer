@@ -1,15 +1,15 @@
 export const TRANSITIONS = {
    ENTRY: {
       DURATION: 0.5,
-      EASE: [0.32, 0.72, 0.1, 1],
+      EASE: [0.32, 0.72, 0, 1],
    },
    SNAP: {
       DURATION: 0.45,
-      EASE: [0.32, 0.72, 0.1, 1],
+      EASE: [0.32, 0.72, 0, 1],
    },
    EXIT: {
       DURATION: 0.4,
-      EASE: [0.32, 0.72, 0.1, 1],
+      EASE: [0.32, 0.72, 0, 1],
    }
 };
 

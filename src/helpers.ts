@@ -1,4 +1,3 @@
-import {Accessor} from "solid-js";
 import {TransitionState} from "./create-transition-state";
 import {TRANSITIONS} from "./constants";
 
@@ -45,13 +44,14 @@ export function reset(el: Element | HTMLElement | null, prop?: string) {
    if (!el || !(el instanceof HTMLElement)) return;
    let originalStyles = cache.get(el);
 
-   if (!originalStyles) {
-      return;
-   }
 
    if (prop) {
-      (el.style as any)[prop] = originalStyles[prop];
-   } else {
+      if (originalStyles && originalStyles[prop]) {
+         (el.style as any)[prop] = originalStyles[prop];
+      } else {
+         (el.style as any)[prop] = '';
+      }
+   } else if (originalStyles) {
       Object.entries(originalStyles).forEach(([key, value]) => {
          (el.style as any)[key] = value;
       });
@@ -69,13 +69,13 @@ export function getTranslateY(element: HTMLElement): number | null {
    return mat ? parseFloat(mat[1].split(', ')[5]) : null;
 }
 
-export function getProgressBetweenPoints(offsets: number[], current: number, fromIndex: number, tillIndex: number, height: number): number {
+export function getProgressBetweenPoints(offsets: number[], current: number, fromIndex: number, tillIndex: number): number {
 
    if (offsets.length < fromIndex || offsets.length < tillIndex) {
       return 0;
    }
 
-   const fromOffset = offsets[fromIndex] || height;
+   const fromOffset = offsets[fromIndex] || 100;
    const tillOffset = offsets[tillIndex] || 0;
 
    if (current <= tillOffset) {

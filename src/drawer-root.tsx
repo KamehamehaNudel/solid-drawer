@@ -1,18 +1,27 @@
-import {set, reset, getTranslateY, dampenValue, isInput, getProgressBetweenPoints, debug} from './helpers';
-import {mergeDefaultProps, isIOS} from "@kobalte/utils";
+import {
+   set,
+   reset,
+   getTranslateY,
+   dampenValue,
+   isInput,
+   getProgressBetweenPoints,
+   debug,
+   buildTransitionString
+} from './helpers';
+import {mergeDefaultProps, isIOS, MaybeAccessor} from "@kobalte/utils";
 import {
    JSX,
    createSignal,
    createEffect,
    mergeProps,
-   splitProps, batch, Accessor, ParentProps, onCleanup,
+   splitProps, batch, ParentProps, onCleanup
 } from "solid-js";
 
 import {createDisclosureState} from "@kobalte/core";
 import {Dialog} from '@kobalte/core';
 import {createSnapPoints} from './create-snap-points';
-import {DrawerContext, DrawerContextValue, useDrawerContext} from './drawer-context';
-import {createTransition} from "./create-transition-state";
+import {DrawerContext, DrawerContextValue, DrawerPublicContext, useDrawerContext} from './drawer-context';
+import {createTransitionState} from "./create-transition-state";
 import "./style.css";
 import {
    WINDOW_TOP_OFFSET,
@@ -24,11 +33,10 @@ import {
    VELOCITY_THRESHOLD, SCROLLABLE_CSS
 } from "./constants";
 import {DialogRootOptions} from "@kobalte/core/dist/types/dialog";
-import {createPositionFixed} from "./experiments/create-position-fixed";
-import {createPreventScroll} from "./experiments/create-prevent-scroll";
+import createPreventScroll from 'solid-prevent-scroll';
 
 export interface DrawerRootOptions extends Omit<DialogRootOptions, 'forceMount'>{
-   activeSnapPoint?: number | null;
+   activeSnapPoint?: number;
    setActiveSnapPoint?: (snapPoint: number) => void;
    children?: any;
    open?: boolean;
@@ -44,47 +52,31 @@ export interface DrawerRootOptions extends Omit<DialogRootOptions, 'forceMount'>
    modal?: boolean;
    nested?: boolean;
    nestedLevel?: number;
-}
-
-interface DrawerRootInterface extends ParentProps<DrawerRootOptions> {}
-
-
-interface WithFadeFromOptions extends DrawerRootInterface {
-   snapPoints: (number | string)[];
+   snapPoints?: (number | string)[];
    defaultSnapPoint?: number,
-   fadeRange?: number[];
-   scaleRange?: number[];
+   fadeRange?: [number, number];
 }
 
-interface WithoutFadeFromOptions extends DrawerRootInterface {
-   snapPoints?: never;
-   defaultSnapPoint?: number,
-   fadeRange?: never;
-   scaleRange?: never;
-}
+export interface DrawerRootInterface extends ParentProps<DrawerRootOptions> {}
 
-export type DrawerRootProps = WithFadeFromOptions | WithoutFadeFromOptions;
-
-export function DrawerRoot(props: DrawerRootProps) {
+export function DrawerRoot(props: DrawerRootInterface) {
 
    props = mergeDefaultProps(
       {
          nested: false,
          nestedLevel: 0,
          modal: true,
-         closeThreshold: CLOSE_THRESHOLD,
+         closeThreshold: CLOSE_THRESHOLD as number,
          scrollLockTimeout: SCROLL_LOCK_TIMEOUT,
          dismissible: true,
-         fadeRange: props.snapPoints ? [-1, props.snapPoints.length - 1] : undefined,
-         scaleRange: props.snapPoints ? [-1, props.snapPoints.length - 1] : undefined,
-         defaultSnapPoint: props.snapPoints ? 0 : undefined,
+         defaultSnapPoint: 1,
+         shouldScaleBackground: false,
       },
       props,
    );
 
    // Check if we are nested inside another drawer
    try {
-
       const {
          onNestedDrag: onNestedDragContext,
          onNestedRelease: onNestedReleaseContext,
@@ -102,7 +94,9 @@ export function DrawerRoot(props: DrawerRootProps) {
          onRelease: onNestedReleaseContext,
          nestedLevel: nestedLevel + 1
       })
+
    } catch (e) {
+      //error just means we are not nested so can be ignored
    }
 
    const [local, others] = splitProps(props, [
@@ -123,8 +117,9 @@ export function DrawerRoot(props: DrawerRootProps) {
       'snapPoints',
       'defaultSnapPoint',
       'fadeRange',
-      'scaleRange',
       'nestedLevel',
+      'preventScroll',
+      'closeThreshold',
    ])
 
    const [draggedDistance, setDraggedDistance] = createSignal<number>(0);
@@ -134,12 +129,12 @@ export function DrawerRoot(props: DrawerRootProps) {
    const [isAllowedToDrag, setIsAllowedToDrag] = createSignal<boolean>(false);
    const [drawerSize, setDrawerSize] = createSignal<number>(0);
 
-   //not sure
+   //not sure if needed anymore
    const [hasBeenOpened, setHasBeenOpened] = createSignal<boolean>(false);
    const [justReleased, setJustReleased] = createSignal<boolean>(false);
 
-   const [drawerRef, setDrawerRef] = createSignal<HTMLElement>();
-   const [overlayRef, setOverlayRef] = createSignal<HTMLElement>();
+   const [drawerRef, setDrawerRef] = createSignal<HTMLElement| null>(null);
+   const [overlayRef, setOverlayRef] = createSignal<HTMLElement|null>(null);
 
    const [keyboardIsOpen, setKeyboardIsOpen] = createSignal<boolean>(false);
 
@@ -154,8 +149,10 @@ export function DrawerRoot(props: DrawerRootProps) {
       snapPointsOffset,
       snapPoints,
       onDrag: onDragSnapPoints,
+      fadeRange,
    } = createSnapPoints({
       snapPoints: local.snapPoints,
+      fadeRange: local.fadeRange,
       get activeSnapPointProp() {
          return local.activeSnapPoint
       },
@@ -168,8 +165,6 @@ export function DrawerRoot(props: DrawerRootProps) {
       },
       drawerRef: () => drawerRef(),
    });
-
-   /* */
 
    let openTime: Date;
    let dragStartTime: Date;
@@ -187,75 +182,14 @@ export function DrawerRoot(props: DrawerRootProps) {
       return (window.innerWidth - WINDOW_TOP_OFFSET) / window.innerWidth;
    }
 
-   /*
-      createEffect(() => {
-         function onVisualViewportChange() {
-            if (!drawerRef()) return;
-
-            const focusedElement = document.activeElement as HTMLElement;
-
-            const {snapPoints, fixed} = local;
-
-            if (isInput(focusedElement) || keyboardIsOpen()) {
-               const visualViewportHeight = window.visualViewport?.height || 0;
-               // This is the height of the keyboard
-               let diffFromInitial = window.innerHeight - visualViewportHeight;
-               const drawerHeight = drawerRef().getBoundingClientRect().height || 0;
-               if (!initialDrawerHeight) {
-                  initialDrawerHeight = drawerHeight;
-               }
-               const offsetFromTop = drawerRef().getBoundingClientRect().top;
-
-               // visualViewport height may change due to some subtle changes to the keyboard. Checking if the height changed by 60 or more will make sure that they keyboard really changed its open state.
-               if (Math.abs(previousDiffFromInitial - diffFromInitial) > 60) {
-                  setKeyboardIsOpen(false);
-               }
-
-               if (snapPoints && snapPoints.length > 0 && snapPointsOffset() && activeSnapPointIndex() !== null) {
-                  const activeSnapPointHeight = snapPointsOffset()[activeSnapPointIndex()] || 0;
-                  diffFromInitial += activeSnapPointHeight;
-               }
-
-               previousDiffFromInitial = diffFromInitial;
-               // We don't have to change the height if the input is in view, when we are here we are in the opened keyboard state so we can correctly check if the input is in view
-               if (drawerHeight > visualViewportHeight || keyboardIsOpen()) {
-                  const height = drawerRef().getBoundingClientRect().height;
-                  let newDrawerHeight = height;
-
-                  if (height > visualViewportHeight) {
-                     newDrawerHeight = visualViewportHeight - WINDOW_TOP_OFFSET;
-                  }
-                  // When fixed, don't move the drawer upwards if there's space, but rather only change it's height so it's fully scrollable when the keyboard is open
-                  if (fixed) {
-                     drawerRef().style.height = `${height - Math.max(diffFromInitial, 0)}px`;
-                  } else {
-                     drawerRef().style.height = `${Math.max(newDrawerHeight, visualViewportHeight - offsetFromTop)}px`;
-                  }
-               } else {
-                  drawerRef().style.height = `${initialDrawerHeight}px`;
-               }
-
-               if (snapPoints && snapPoints.length > 0 && !keyboardIsOpen()) {
-                  drawerRef().style.bottom = `0px`;
-               } else {
-                  // Negative bottom value would never make sense
-                  drawerRef().style.bottom = `${Math.max(diffFromInitial, 0)}px`;
-               }
-            }
-         }
-
-         window.visualViewport?.addEventListener('resize', onVisualViewportChange);
-
-         onCleanup(() => {
-            window.visualViewport?.removeEventListener('resize', onVisualViewportChange)
-         })
-      });*/
-
    function shouldDrag(el: EventTarget, isDraggingDown: boolean) {
+
+      const ref = drawerRef();
+
       let element = el as HTMLElement;
       const date = new Date();
       const highlightedText = window.getSelection()?.toString();
-      const swipeAmount = drawerRef() ? getTranslateY(drawerRef()) : null;
+      const swipeAmount = ref ? getTranslateY(ref) : null;
 
       // Allow scrolling when animating
       if (openTime && date.getTime() - openTime.getTime() < 500) {
@@ -269,9 +203,9 @@ export function DrawerRoot(props: DrawerRootProps) {
 
       // Disallow dragging if drawer was scrolled within `scrollLockTimeout`
       if (
-         lastTimeDragPrevented &&
-         date.getTime() - lastTimeDragPrevented.getTime() < local.scrollLockTimeout &&
-         swipeAmount === 0
+         lastTimeDragPrevented
+         && (date.getTime() - lastTimeDragPrevented.getTime()) < local.scrollLockTimeout!
+         && swipeAmount === 0
       ) {
          lastTimeDragPrevented = new Date();
          return false;
@@ -313,6 +247,7 @@ export function DrawerRoot(props: DrawerRootProps) {
       return true;
    }
 
+   /* */
    function markScrollable(el: HTMLElement) {
       if (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) {
          el.classList.add(SCROLLABLE_CSS);
@@ -336,12 +271,14 @@ export function DrawerRoot(props: DrawerRootProps) {
    }
 
    createEffect(() => {
-      if (drawerRef()) {
-         setDrawerSize(drawerRef().getBoundingClientRect().height)
+      const ref = drawerRef();
+      if (ref) {
+         setDrawerSize(ref.getBoundingClientRect().height)
       }
    })
 
    /* Side effects of toggling "open" state of the drawer */
+   /* probably not best-practice to sync state like this, but it is what it is*/
    createEffect((prev) => {
       const open = disclosureState.isOpen();
 
@@ -349,10 +286,9 @@ export function DrawerRoot(props: DrawerRootProps) {
          setHasBeenOpened(true);
          openTime = new Date();
 
-         window.setTimeout(() => {
-            setActiveSnapPoint(local.defaultSnapPoint);
-         }, 0)
-
+         window.requestAnimationFrame(() => {
+            setActiveSnapPoint(local.defaultSnapPoint!);
+         })
       } else if (prev !== open) {
          setActiveSnapPoint(0);
       }
@@ -363,13 +299,12 @@ export function DrawerRoot(props: DrawerRootProps) {
       }
 
       return open;
-
    }, disclosureState.isOpen()) //wire in initial state
-
-   /* background scaling effect */
 
    const hasSnapPoints = () => local.snapPoints && local.snapPoints.length > 0;
 
+   /* background scaling effect */
+   /* This feels super cursed. Currently lack of better idea but it works ¯\_(ツ)_/¯ */
    createEffect((prevPath) => {
       const wrapper = document.querySelector('[vaul-drawer-wrapper]');
 
@@ -379,10 +314,17 @@ export function DrawerRoot(props: DrawerRootProps) {
 
       let percentageDragged = 0;
 
-      if (isDragging()) {
+      /* always apply background effect between the last two snap points (for now). Everything else looked weird */
+      const fromIndex = snapPoints().length -2;
+      const tillIndex = snapPoints().length -1;
+
+      /* Approach: We debounce the execution by returning the previously execution path taken and checkin against it (except for when we are dragging) */
+
+      if (isAllowedToDrag()) {
+         /* when dragging apply based on progress between "from" and "till" range */
 
          if (hasSnapPoints()) {
-            percentageDragged = 1 - getProgressBetweenPoints(snapPointsOffset(), draggedDistance(), 0, 1, drawerSize())
+            percentageDragged = 1 - getProgressBetweenPoints(snapPointsOffset(), draggedDistance(), fromIndex, tillIndex)
 
          } else {
             percentageDragged = draggedDistance() / drawerSize();
@@ -404,7 +346,7 @@ export function DrawerRoot(props: DrawerRootProps) {
 
          return 'dragging';
       } else if (st === 'enter-start' && prevPath !== 'start') {
-
+         /* apply initial styles so transitions work */
          set(document.body,
             {
                background: 'black',
@@ -418,7 +360,7 @@ export function DrawerRoot(props: DrawerRootProps) {
 
          return 'start';
 
-      } else if (((hasSnapPoints() && activeSnapPoint() >= 1) || (st === 'entering' || st === 'entered')) && prevPath !== 'setting') {
+      } else if ((hasSnapPoints() && activeSnapPoint() >= tillIndex) && prevPath !== 'setting') {
 
          set(wrapper, {
             borderRadius: `${BORDER_RADIUS}px`,
@@ -432,7 +374,7 @@ export function DrawerRoot(props: DrawerRootProps) {
 
          return 'setting';
 
-      } else if (((hasSnapPoints() && activeSnapPoint() <= 0) || st === 'exiting') && prevPath !== 'unsetting') {
+      } else if ((hasSnapPoints() && activeSnapPoint() <= fromIndex) && prevPath !== 'unsetting') {
 
          reset(wrapper, 'overflow');
          reset(wrapper, 'transform');
@@ -441,7 +383,7 @@ export function DrawerRoot(props: DrawerRootProps) {
             transitionProperty: 'transform, border-radius',
             transitionDuration: `${TRANSITIONS.EXIT.DURATION}s`,
             transitionTimingFunction: `cubic-bezier(${TRANSITIONS.EXIT.EASE.join(',')})`,
-         });
+         }, true);
 
          return 'unsetting';
 
@@ -453,27 +395,37 @@ export function DrawerRoot(props: DrawerRootProps) {
       }
    }, undefined)
 
-   const openState = createTransition({
+   onCleanup(() => {
+      if (!local.shouldScaleBackground) {
+         return false;
+      }
+      const wrapper = document.querySelector('[vaul-drawer-wrapper]');
+      reset(document.body);
+      if (wrapper) {
+         reset(wrapper, 'overflow');
+         reset(wrapper, 'transform');
+         reset(wrapper, 'borderRadius');
+      }
+   })
+
+   const openState = createTransitionState({
       active: () => disclosureState.isOpen(),
       delay: TRANSITIONS.ENTRY.DURATION * 1000,
       exitDelay: TRANSITIONS.EXIT.DURATION * 1000,
    });
 
-
-   createPreventScroll({
-      ownerRef: () => drawerRef(),
-      isDisabled: () => !disclosureState.isOpen(),
-   })
-
-   const nestedState = createTransition({
+   const nestedState = createTransitionState({
       active: () => nestedOpen(),
       delay: TRANSITIONS.ENTRY.DURATION * 1000,
       exitDelay: TRANSITIONS.EXIT.DURATION * 1000,
    })
 
-   function onPress(event: JSX.EventHandlerUnion<any, PointerEvent | TouchEvent>) {
+   function onPress(event: PointerEvent | TouchEvent) {
+
+      const ref = drawerRef();
+
       if (!local.dismissible && !local.snapPoints) return;
-      if (drawerRef() && !drawerRef().contains(event.target as Node)) return;
+      if (ref && !ref.contains(event.target as Node)) return;
 
       setIsDragging(true);
       dragStartTime = new Date();
@@ -484,9 +436,13 @@ export function DrawerRoot(props: DrawerRootProps) {
       }
 
       // Ensure we maintain correct pointer capture even when going outside of the drawer
-      (event.target as HTMLElement).setPointerCapture(event.pointerId);
+      if ("pointerId" in event) {
+         (event.target as HTMLElement).setPointerCapture(event.pointerId);
+      }
 
-      pointerStartY = event.clientY;
+      if ("clientY" in event) {
+         pointerStartY = event.clientY;
+      }
    }
 
    function onDrag(event: PointerEvent | TouchEvent) {
@@ -532,7 +488,9 @@ export function DrawerRoot(props: DrawerRootProps) {
    }
 
    function onRelease(event: PointerEvent | TouchEvent) {
-      if (!isDragging || !drawerRef()) return;
+      const ref = drawerRef();
+
+      if (!isDragging || !ref) return;
 
       const {snapPoints, closeThreshold} = local;
 
@@ -548,9 +506,9 @@ export function DrawerRoot(props: DrawerRootProps) {
 
       dragEndTime = new Date();
 
-      const swipeAmount = getTranslateY(drawerRef());
+      const swipeAmount = getTranslateY(ref);
 
-      if (!shouldDrag(event.target, false) || !swipeAmount || Number.isNaN(swipeAmount)) return;
+      if (!shouldDrag(event.target as HTMLElement, false) || !swipeAmount || Number.isNaN(swipeAmount)) return;
 
       if (dragStartTime === null || dragStartTime === undefined) return;
 
@@ -595,9 +553,9 @@ export function DrawerRoot(props: DrawerRootProps) {
          return;
       }
 
-      const visibleDrawerHeight = Math.min(drawerRef().getBoundingClientRect().height || 0, window.innerHeight);
+      const visibleDrawerHeight = Math.min(ref.getBoundingClientRect().height || 0, window.innerHeight);
 
-      if (swipeAmount >= visibleDrawerHeight * closeThreshold) {
+      if (swipeAmount >= visibleDrawerHeight * closeThreshold!) {
          local.onRelease?.(event, false);
          return;
       }
@@ -612,26 +570,23 @@ export function DrawerRoot(props: DrawerRootProps) {
       close: () => disclosureState.close(),
       isOpen: disclosureState.isOpen,
       activeSnapPoint: () => activeSnapPoint(),
-      snapPoints: () => local.snapPoints,
-      fadeRange: () => local.fadeRange,
+      snapPoints: () => snapPoints(),
+      fadeRange: () => fadeRange(),
       setActiveSnapPoint,
       drawerRef,
       setDrawerRef,
       overlayRef,
       setOverlayRef,
-      onOpenChange: local.onOpenChange,
       onPress,
       onRelease,
       onDrag,
       isDragging: isAllowedToDrag,
       draggedDistance,
-      dismissible: () => local.dismissible || false,
+      dismissible: () => local.dismissible ?? true,
       onNestedDrag,
       onNestedOpenChange,
       onNestedRelease,
-      keyboardIsOpen,
-      setKeyboardIsOpen,
-      modal: () => local.modal || false,
+      modal: () => local.modal ?? false,
       snapPointsOffset,
       drawerSize,
       nestedOpen,
@@ -641,16 +596,22 @@ export function DrawerRoot(props: DrawerRootProps) {
       nestedState,
    }
 
+   /**
+    * We use our own preventScroll because kobalte's is bugged on ios
+    */
+   createPreventScroll({
+      element: () => drawerRef(),
+      enabled: () => local.preventScroll !== false && openState() !== 'exited',
+   })
+
    return (
       <Dialog.Root
          modal={local.modal}
          onOpenChange={(o) => {
-
             if (local.open !== undefined) {
                local.onOpenChange?.(o);
                return;
             }
-
             if (o) {
                disclosureState.open();
             } else {
@@ -663,7 +624,24 @@ export function DrawerRoot(props: DrawerRootProps) {
          {...others}
       >
          <DrawerContext.Provider value={context}>
-            {local.children}
+            <DrawerPublicContext.Provider value={
+               {
+                  state: openState,
+                  close: () => disclosureState.close(),
+                  open: () => disclosureState.open(),
+                  isOpen: () => disclosureState.isOpen(),
+                  activeSnapPoint: activeSnapPoint,
+                  snapPointsOffset: snapPointsOffset,
+                  isDragging: isAllowedToDrag,
+                  drawerRef: drawerRef,
+                  overlayRef: overlayRef,
+                  draggedDistance,
+                  drawerSize,
+                  transition: (property) => buildTransitionString(property, openState(),isAllowedToDrag()),
+               }
+            }>
+               {local.children}
+            </DrawerPublicContext.Provider>
          </DrawerContext.Provider>
       </Dialog.Root>
    );

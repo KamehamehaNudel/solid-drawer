@@ -1,11 +1,24 @@
-import {createEffect, splitProps, onCleanup, createMemo, createSignal} from "solid-js";
+import {createEffect, splitProps, onCleanup, createMemo, JSX} from "solid-js";
 import {Dialog} from "@kobalte/core";
-import {mergeRefs} from "@kobalte/utils";
+import {mergeRefs, OverrideComponentProps} from "@kobalte/utils";
 import {useDrawerContext} from "./drawer-context";
 import {NESTED_DISPLACEMENT} from "./constants";
 import {buildTransitionString} from "./helpers";
+import {DialogContentOptions} from "@kobalte/core/dist/types/dialog";
 
-export function DrawerContent(props) {
+export interface DrawerContentOptions extends Omit<DialogContentOptions, "style"> {
+   /** The HTML styles attribute (object form only). */
+   style?: Omit<JSX.CSSProperties, 'transition' | 'transform' | 'transform-style' | 'transition-duration' | 'transition-delay'>;
+}
+
+export interface DrawerContentProps extends OverrideComponentProps<"div", DrawerContentOptions> {}
+
+/**
+ * The Content of the Drawer. Extension of the DialogContent component
+ * Avoid applying transitions on it. This is ha
+ */
+
+export function DrawerContent(props: DrawerContentProps) {
 
    const [local, others] = splitProps(props, ["ref", "children", "style", "onOpenAutoFocus", "onPointerDownOutside", "onAnimationEnd", "style"]);
 
@@ -22,7 +35,7 @@ export function DrawerContent(props) {
 
    let hasTouch = false;
 
-   const visibleHeight = () => {
+   const visibleHeight = createMemo(() => {
 
       const height = drawerContext.drawerSize();
 
@@ -30,11 +43,12 @@ export function DrawerContent(props) {
          return height - drawerContext.draggedDistance()
       }
       if (drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset()?.length > 0) {
+         // @ts-ignore
          return height - drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()]
       }
 
       return drawerContext.isOpen() ? height : 0;
-   }
+   });
 
    const styleTransform = createMemo(() => {
 
@@ -46,7 +60,7 @@ export function DrawerContent(props) {
          const newScale = initialScale + drawerContext.nestedProgress() * (1 - initialScale);
          const yOffset = - 24 + drawerContext.nestedProgress() * 24;
 
-         const newY =  drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()] + yOffset : yOffset;
+         const newY =  drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()] as number + yOffset : yOffset;
 
          return `scale(${newScale}) translate3d(0px, ${newY}px, 0px)`
       }
@@ -62,7 +76,7 @@ export function DrawerContent(props) {
 
          const yOffset = -24;
 
-         const newY =  drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()] + yOffset : yOffset;
+         const newY =  drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()] as number + yOffset : yOffset;
 
          return `scale(${scale}) translate3d(0, ${newY}px, 0)`;
       }
@@ -77,14 +91,6 @@ export function DrawerContent(props) {
    const styleTransition = createMemo(() => {
       return buildTransitionString('transform', drawerContext.nestedState() !== 'exited' ? drawerContext.nestedState() : drawerContext.state(), drawerContext.isDragging() || drawerContext.nestedDragging())
    })
-
-/*   createEffect(() => {
-      console.log('nested State', drawerContext.nestedState())
-   })
-
-   createEffect(() => {
-      console.log('nested open', drawerContext.nestedOpen())
-   })*/
 
    const onPointerUp = (e: PointerEvent) => {
       if (!hasTouch) {
@@ -132,7 +138,6 @@ export function DrawerContent(props) {
             }
 
             e.preventDefault();
-            drawerContext.onOpenChange?.(false);
 
             if (!drawerContext.dismissible()) {
                return;
@@ -141,28 +146,23 @@ export function DrawerContent(props) {
             drawerContext.close();
          }}
          ref={mergeRefs(drawerContext.setDrawerRef, local.ref)}
-         style={{
-            '--visible-height': `${visibleHeight()}px`,
-            '--snap-point-height': drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? `${drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()]}px` : undefined,
-            '--first-snap-point-height': drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? `${drawerContext.drawerSize() - drawerContext.snapPointsOffset()[0]}px` : undefined,
-            'transition': styleTransition(),
-            'transform': styleTransform(),
-            ...local.style,
-         }}
+         style={
+            {
+               '--visible-height': `${visibleHeight()}px`,
+               '--snap-point-height': drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? `${drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()]}px` : undefined,
+               '--first-snap-point-height': drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? `${drawerContext.drawerSize() - drawerContext.snapPointsOffset()[0]!}px` : undefined,
+               'transition': styleTransition(),
+               'transform': styleTransform(),
+               ...local.style,
+            } as JSX.CSSProperties
+         }
          {...others}
          vaul-drawer=""
          vaul-drawer-visible={drawerContext.visible() ? 'true' : 'false'}
          vaul-drawer-state={drawerContext.state()}
          vaul-dragging={drawerContext.isDragging() ? 'true' : 'false'}
       >
-         <div
-            class="drawer__inner"
-            style={{
-               transition: buildTransitionString('height', drawerContext.state(), drawerContext.isDragging()),
-            }}
-         >
-            {local.children}
-         </div>
+         {local.children}
       </Dialog.Content>
    )
 }

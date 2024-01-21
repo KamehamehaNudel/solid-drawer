@@ -16,7 +16,7 @@ export type TransitionState =
    | 'exiting'
    | 'exited';
 
-export const createTransition = (props: Props): Accessor<TransitionState> => {
+export const createTransitionState = (props: Props): Accessor<TransitionState> => {
    const [state, setState] = createSignal<TransitionState>(props.active() ? 'entered' : 'exited');
 
    // Transitions are always static on the server.

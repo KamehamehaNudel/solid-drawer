@@ -1,15 +1,17 @@
-import {dampenValue, set} from './helpers';
-import {TRANSITIONS, VELOCITY_THRESHOLD} from './constants';
+import {dampenValue} from './helpers';
+import {VELOCITY_THRESHOLD} from './constants';
 import {createControllableSignal} from '@kobalte/core';
-import {Accessor, createEffect, createMemo} from 'solid-js';
+import {Accessor, createMemo} from 'solid-js';
+import {n} from "vitest/dist/types-198fd1d9";
 
 export function createSnapPoints(props: {
-   activeSnapPointProp: number | null | undefined;
+   activeSnapPointProp: number |  undefined;
    setActiveSnapPointProp?(snapPoint: number): void;
    snapPoints?: (number | string)[];
+   fadeRange?: [number, number];
    onSnapPointChange(activeSnapPointIndex: number): void;
    setDraggedDistance(distance: number): void;
-   drawerRef: Accessor<HTMLElement| undefined>;
+   drawerRef: Accessor<HTMLElement| null>;
 }) {
 
    const [activeSnapPoint, setActiveSnapPoint] = createControllableSignal({
@@ -18,10 +20,13 @@ export function createSnapPoints(props: {
       onChange: props.setActiveSnapPointProp,
    });
 
+   /*
+    * ensures there are always at least 2 snap points. "0" for closed state and "1" for full if no other was given
+    */
    const resolvedSnapPoints = createMemo(() => {
       let snapPoints = [];
 
-      if (props.snapPoints && props.snapPoints[0] !== 0) {
+      if (!props.snapPoints || props.snapPoints[0] !== 0) {
          snapPoints.push(0);
       }
 
@@ -32,6 +37,18 @@ export function createSnapPoints(props: {
       }
 
       return snapPoints;
+   })
+
+   // @ts-ignore
+   const resolvedFadeRange: Accessor<[number, number]> = createMemo(() => {
+
+      const snapPoints = resolvedSnapPoints();
+
+      if (props.fadeRange === undefined || props.fadeRange.length !== 2) {
+         return [0, snapPoints.length -1];
+      }
+
+      return props.fadeRange;
    })
 
    const isLastSnapPoint = createMemo(() => {
@@ -60,7 +77,8 @@ export function createSnapPoints(props: {
       }),
    );
 
-   const activeSnapPointOffset = createMemo(() => {
+   // @ts-ignore
+   const activeSnapPointOffset: Accessor<number> = createMemo(() => {
       return snapPointsOffset()[activeSnapPoint()];
    });
 
@@ -114,11 +132,12 @@ export function createSnapPoints(props: {
 
    function onDrag({draggedDistance}: { draggedDistance: number }) {
 
+      const lastOffset = snapPointsOffset()[snapPointsOffset().length -1] as number;
       const newYValue = activeSnapPointOffset() - draggedDistance;
 
-      if (newYValue < snapPointsOffset()[snapPointsOffset().length -1]) {
-         const dampenedDraggedDistance = dampenValue(draggedDistance);
-         props.setDraggedDistance(snapPointsOffset()[snapPointsOffset().length -1] + Math.min(dampenedDraggedDistance * -1, 0));
+      if (newYValue < lastOffset) {
+         const dampenedDraggedDistance = dampenValue(newYValue * -1);
+         props.setDraggedDistance(lastOffset + Math.min(dampenedDraggedDistance * -1, 0));
       } else {
          props.setDraggedDistance(newYValue);
       }
@@ -131,5 +150,6 @@ export function createSnapPoints(props: {
       onDrag,
       snapPointsOffset,
       snapPoints: resolvedSnapPoints,
+      fadeRange: resolvedFadeRange,
    };
 }

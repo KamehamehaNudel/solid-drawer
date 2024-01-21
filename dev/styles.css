@@ -13,13 +13,7 @@ code {
 
 body {
    margin: 0;
-}
-
-body,
-main {
    min-height: 100vh;
-   min-height: -webkit-fill-available;
-   overflow-x: hidden;
 }
 
 main {
@@ -106,7 +100,7 @@ a {
    position: fixed;
    left: 0;
    right: 0;
-   bottom: env(safe-area-inset-bottom);
+   bottom: 0;
    display: flex;
    flex-direction: column;
    height: 100%;
