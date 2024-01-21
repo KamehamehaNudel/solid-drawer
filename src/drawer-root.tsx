@@ -450,13 +450,22 @@ export function DrawerRoot(props: DrawerRootInterface) {
       if (isDragging()) {
 
          const drawerHeight = drawerRef()?.getBoundingClientRect().height || 0;
-         const dragDistance = pointerStartY - (event.clientY || event.touches?.[0]?.clientY);
+         let dragDistance;
+
+         if ("clientY" in event) {
+            dragDistance = pointerStartY - event.clientY;
+         } else if ("touches" in event) {
+            dragDistance = pointerStartY - (event.touches?.[0]?.clientY || 0);
+         } else {
+            dragDistance = pointerStartY;
+         }
+
          const isDraggingDown = dragDistance > 0;
 
          // Disallow dragging down to close when first snap point is the active one and dismissible prop is set to false.
          if (local.snapPoints && activeSnapPoint() === 1 && !local.dismissible) return;
 
-         if (!isAllowedToDrag() && !shouldDrag(event.target, isDraggingDown)) return;
+         if (!isAllowedToDrag() && !shouldDrag(event.target!, isDraggingDown)) return;
 
          // If shouldDrag gave true once after pressing down on the drawer, we set isAllowedToDrag to true and it will remain true until we let go, there's no reason to disable dragging mid way, ever, and that's the solution to it
          setIsAllowedToDrag(true);
@@ -512,7 +521,15 @@ export function DrawerRoot(props: DrawerRootInterface) {
 
       if (dragStartTime === null || dragStartTime === undefined) return;
 
-      const y = event.clientY || event.changedTouches?.[0]?.clientY;
+      let y;
+
+      if ("clientY" in event) {
+         y = event.clientY;
+      } else if ("touches" in event) {
+         y =  (event.touches?.[0]?.clientY || 0);
+      } else {
+         y = 0;
+      }
 
       const timeTaken = dragEndTime.getTime() - dragStartTime.getTime();
       const distMoved = pointerStartY - y;

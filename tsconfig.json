@@ -28,8 +28,6 @@
          "solid-js",
          "vite/client",
          "node",
-         "jest",
-         "@testing-library/jest-dom"
       ]
    },
    "exclude": [

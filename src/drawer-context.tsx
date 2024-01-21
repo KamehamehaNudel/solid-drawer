@@ -1,6 +1,5 @@
 import {Accessor, createContext, Setter, useContext} from "solid-js";
 import {TransitionState} from "./create-transition-state";
-import {n} from "vitest/dist/types-198fd1d9";
 
 export interface DrawerContextValue {
    drawerRef: Accessor<HTMLElement | null>;
