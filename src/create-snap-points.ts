@@ -2,7 +2,6 @@ import {dampenValue} from './helpers';
 import {VELOCITY_THRESHOLD} from './constants';
 import {createControllableSignal} from '@kobalte/core';
 import {Accessor, createMemo} from 'solid-js';
-import {n} from "vitest/dist/types-198fd1d9";
 
 export function createSnapPoints(props: {
    activeSnapPointProp: number |  undefined;
@@ -82,7 +81,7 @@ export function createSnapPoints(props: {
       return snapPointsOffset()[activeSnapPoint()];
    });
 
-   function onRelease({draggedDistance, closeDrawer, velocity,}: {
+   function onRelease({draggedDistance, closeDrawer, velocity}: {
       draggedDistance: number;
       closeDrawer: () => void;
       velocity: number;
@@ -121,23 +120,33 @@ export function createSnapPoints(props: {
 
          if (isFirst && dragDirection < 0) {
             closeDrawer();
+            return;
          }
 
          setActiveSnapPoint(activeSnapPoint() + dragDirection);
          return;
       }
 
-      setActiveSnapPoint(snapPointsOffset().findIndex(value => closestSnapPoint === value));
+      const closesSnapPointIndex = snapPointsOffset().findIndex(value => closestSnapPoint === value);
+      if (closesSnapPointIndex === 0) {
+         closeDrawer();
+         return;
+      }
+      setActiveSnapPoint(closesSnapPointIndex);
    }
 
-   function onDrag({draggedDistance}: { draggedDistance: number }) {
+   function onDrag({draggedDistance, dismissible}: { draggedDistance: number , dismissible: boolean}) {
 
       const lastOffset = snapPointsOffset()[snapPointsOffset().length -1] as number;
+      const firstOffset = snapPointsOffset()[1] as number;
       const newYValue = activeSnapPointOffset() - draggedDistance;
 
       if (newYValue < lastOffset) {
          const dampenedDraggedDistance = dampenValue(newYValue * -1);
          props.setDraggedDistance(lastOffset + Math.min(dampenedDraggedDistance * -1, 0));
+      } else if (newYValue > firstOffset && !dismissible) {
+         const dampenedDraggedDistance = dampenValue(newYValue - firstOffset);
+         props.setDraggedDistance(firstOffset - Math.min(dampenedDraggedDistance * -1, 0));
       } else {
          props.setDraggedDistance(newYValue);
       }

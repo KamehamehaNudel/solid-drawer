@@ -15,7 +15,7 @@ const App: Component = () => {
       <header class={styles.header}>
         <img src={logo} class={styles.logo} alt="logo" />
         <h1>
-          <Drawer.Root shouldScaleBackground={true} preventScroll={true} modal={true} defaultSnapPoint={2} snapPoints={[0.6, 1]} fadeRange={[0, 1]}>
+          <Drawer.Root shouldScaleBackground={true} preventScroll={true} modal={true} dismissible={false} defaultSnapPoint={2} snapPoints={[0.6, 1]} fadeRange={[0, 1]}>
             <Dialog.Trigger class="dialog__trigger">Open</Dialog.Trigger>
             <Dialog.Portal>
                <Drawer.Overlay/>

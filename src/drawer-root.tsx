@@ -36,24 +36,66 @@ import {DialogRootOptions} from "@kobalte/core/dist/types/dialog";
 import createPreventScroll from 'solid-prevent-scroll';
 
 export interface DrawerRootOptions extends Omit<DialogRootOptions, 'forceMount'>{
+   /**
+    * Supply for controlling the active snap-point. Index has to exist in provided snap-points.
+    */
    activeSnapPoint?: number;
+   /**
+    * Setter for the active snap point.
+    * @param snapPoint
+    */
    setActiveSnapPoint?: (snapPoint: number) => void;
    children?: any;
-   open?: boolean;
-   defaultOpen?: boolean;
+   /**
+    * Threshold value for closing.
+    */
    closeThreshold?: number;
-   onOpenChange?: (open: boolean) => void;
+   /**
+    * Flag for enabling the scaling background effect.
+    */
    shouldScaleBackground?: boolean;
+   /**
+    * Timeout in ms for locking dragging after scrolling happened. Defaults to 100ms
+    */
    scrollLockTimeout?: number;
-   fixed?: boolean;
+   /**
+    * If false, the drawer is not dismissible via gestures or by clicking the overlay. Attempts to drag lower than first visible snap-point are damped (same as dragging higher than highest one).
+    * If no explicit snap-points are defined, attempts to drag in either direction are dampened,
+    * Defaults to TRUE
+    */
    dismissible?: boolean;
+   /**
+    * Callback upon dragging
+    */
    onDrag?: (event: TouchEvent | PointerEvent, percentageDragged: number) => void;
+   /**
+    * Callback upon release. Receives the "open" state as a second argument
+    */
    onRelease?: (event: TouchEvent | PointerEvent, open: boolean) => void;
-   modal?: boolean;
+   /**
+    * INTERNAL ONLY
+    * used when detecting nested drawers. Specifying yourself can lead to BROKEN behavior
+    */
    nested?: boolean;
+
+   /** INTERNAL ONLY
+    * used when detecting nested drawers. Specifying yourself can lead to BROKEN behavior
+    */
    nestedLevel?: number;
+   /**
+    * Define snap-points at which the Drawer should "snap" to.
+    * Points in px (string) or fraction of the total height of the drawer (calculated open visible mount). Have to be in ascending order.
+    */
    snapPoints?: (number | string)[];
+   /**
+    * The index of the snap-point to "snap to" when the drawer is opened.
+    * Defaults to 1 (the first visible snap-point).
+    */
    defaultSnapPoint?: number,
+   /**
+    * Snap-points indexes between which the fading of the background should happen.
+    * By default, spans all snap-points meaning the overlay will get progressively darker between snap-points.
+    */
    fadeRange?: [number, number];
 }
 
@@ -108,7 +150,6 @@ export function DrawerRoot(props: DrawerRootInterface) {
       'onOpenChange',
       'shouldScaleBackground',
       'scrollLockTimeout',
-      'fixed',
       'dismissible',
       'onDrag',
       'onRelease',
@@ -135,8 +176,6 @@ export function DrawerRoot(props: DrawerRootInterface) {
 
    const [drawerRef, setDrawerRef] = createSignal<HTMLElement| null>(null);
    const [overlayRef, setOverlayRef] = createSignal<HTMLElement|null>(null);
-
-   const [keyboardIsOpen, setKeyboardIsOpen] = createSignal<boolean>(false);
 
    const [nestedOpen, setNestedOpen] = createSignal(false);
    const [nestedDragging, setNestedDragging] = createSignal(false);
@@ -301,7 +340,6 @@ export function DrawerRoot(props: DrawerRootInterface) {
       return open;
    }, disclosureState.isOpen()) //wire in initial state
 
-   const hasSnapPoints = () => local.snapPoints && local.snapPoints.length > 0;
 
    /* background scaling effect */
    /* This feels super cursed. Currently lack of better idea but it works ¯\_(ツ)_/¯ */
@@ -318,17 +356,12 @@ export function DrawerRoot(props: DrawerRootInterface) {
       const fromIndex = snapPoints().length -2;
       const tillIndex = snapPoints().length -1;
 
-      /* Approach: We debounce the execution by returning the previously execution path taken and checkin against it (except for when we are dragging) */
+      /* Approach: We debounce the execution by returning the previous execution path taken and checkin against it (except for when we are dragging) */
 
       if (isAllowedToDrag()) {
+
          /* when dragging apply based on progress between "from" and "till" range */
-
-         if (hasSnapPoints()) {
-            percentageDragged = 1 - getProgressBetweenPoints(snapPointsOffset(), draggedDistance(), fromIndex, tillIndex)
-
-         } else {
-            percentageDragged = draggedDistance() / drawerSize();
-         }
+         percentageDragged = 1 - getProgressBetweenPoints(snapPointsOffset(), draggedDistance(), fromIndex, tillIndex)
 
          const scaleValue = Math.min(getScale() + percentageDragged * (1 - getScale()), 1);
          const borderRadiusValue = 8 - percentageDragged * 8;
@@ -360,7 +393,7 @@ export function DrawerRoot(props: DrawerRootInterface) {
 
          return 'start';
 
-      } else if ((hasSnapPoints() && activeSnapPoint() >= tillIndex) && prevPath !== 'setting') {
+      } else if ((activeSnapPoint() >= tillIndex) && prevPath !== 'setting') {
 
          set(wrapper, {
             borderRadius: `${BORDER_RADIUS}px`,
@@ -374,7 +407,7 @@ export function DrawerRoot(props: DrawerRootInterface) {
 
          return 'setting';
 
-      } else if ((hasSnapPoints() && activeSnapPoint() <= fromIndex) && prevPath !== 'unsetting') {
+      } else if ((activeSnapPoint() <= fromIndex) && prevPath !== 'unsetting') {
 
          reset(wrapper, 'overflow');
          reset(wrapper, 'transform');
@@ -423,8 +456,6 @@ export function DrawerRoot(props: DrawerRootInterface) {
    function onPress(event: PointerEvent | TouchEvent) {
 
       const ref = drawerRef();
-
-      if (!local.dismissible && !local.snapPoints) return;
       if (ref && !ref.contains(event.target as Node)) return;
 
       setIsDragging(true);
@@ -456,24 +487,26 @@ export function DrawerRoot(props: DrawerRootInterface) {
 
          const isDraggingDown = dragDistance > 0;
 
-         // Disallow dragging down to close when first snap point is the active one and dismissible prop is set to false.
-         if (local.snapPoints && activeSnapPoint() === 1 && !local.dismissible) return;
-
          if (!isAllowedToDrag() && !shouldDrag(event.target!, isDraggingDown)) return;
+
+
 
          // If shouldDrag gave true once after pressing down on the drawer, we set isAllowedToDrag to true and it will remain true until we let go, there's no reason to disable dragging mid way, ever, and that's the solution to it
          setIsAllowedToDrag(true);
 
          if (local.snapPoints) {
-            onDragSnapPoints({draggedDistance: dragDistance});
+            onDragSnapPoints({draggedDistance: dragDistance, dismissible: local.dismissible ?? true});
          }
 
-         // Run this only if snapPoints are not defined or if we are at the last snap point (highest one)
+         // Run this only if snapPoints are not defined
          if (dragDistance > 0 && (!local.snapPoints)) {
-
             const dampenedDraggedDistance = dampenValue(dragDistance);
             setDraggedDistance(Math.min(dampenedDraggedDistance * -1, 0));
 
+            return;
+         } else if ( dragDistance < 0 && (!local.snapPoints)) {
+            const dampenedDraggedDistance = dampenValue(dragDistance * -1);
+            setDraggedDistance(dampenedDraggedDistance);
             return;
          }
 
@@ -536,7 +569,11 @@ export function DrawerRoot(props: DrawerRootInterface) {
          onReleaseSnapPoints({
             draggedDistance: distMoved,
             closeDrawer: function () {
-               disclosureState.close();
+               if (local.dismissible) {
+                  disclosureState.close();
+                  return;
+               }
+               setActiveSnapPoint(1);
             },
             velocity,
          });
@@ -552,15 +589,24 @@ export function DrawerRoot(props: DrawerRootInterface) {
       }
 
       if (velocity > VELOCITY_THRESHOLD) {
-         disclosureState.close();
-         local.onRelease?.(event, false);
+         if (local.dismissible) {
+            disclosureState.close();
+            local.onRelease?.(event, false);
+            return;
+         }
+         local.onRelease?.(event, true);
          return;
       }
 
       const visibleDrawerHeight = Math.min(ref.getBoundingClientRect().height || 0, window.innerHeight);
 
       if (swipeAmount >= visibleDrawerHeight * closeThreshold!) {
-         local.onRelease?.(event, false);
+         if (local.dismissible) {
+            disclosureState.close();
+            local.onRelease?.(event, false);
+            return;
+         }
+         local.onRelease?.(event, true);
          return;
       }
 
