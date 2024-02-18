@@ -1,11 +1,10 @@
 import {Accessor, createContext, Setter, useContext} from "solid-js";
 import {TransitionState} from "./create-transition-state";
+import {DrawerApi} from "./create-drawer";
 
 export interface DrawerContextValue {
    drawerRef: Accessor<HTMLElement | null>;
    setDrawerRef: Setter<HTMLElement | null>;
-   overlayRef: Accessor<HTMLElement | null>;
-   setOverlayRef: Setter<HTMLElement | null>;
 
    isOpen: Accessor<boolean>;
    close: () => void;
@@ -48,63 +47,7 @@ export function useDrawerContext() {
    return context;
 }
 
-export interface DrawerPublicContextValue {
-   drawerRef: Accessor<HTMLElement | null>
-   overlayRef: Accessor<HTMLElement | null>
-
-   /**
-    * If currently open
-    */
-
-   isOpen: Accessor<boolean>
-   /**
-    * Close the drawer
-    */
-   close: () => void;
-
-   /**
-    * Open the drawer
-    */
-   open: () => void;
-
-   /**
-    * The calculated Offsets (in px) for the snap points
-    */
-   snapPointsOffset: Accessor<number[]>;
-
-   /**
-    * If the drawer is currently being dragged
-    */
-   isDragging: Accessor<boolean>;
-   /**
-    * Active's snap point's index. If none were explicitly defined, either 0 (closed) or 1 (open)
-    */
-   activeSnapPoint: Accessor<number>;
-
-   /**
-    * TransitionState.
-    */
-   state: Accessor<TransitionState>;
-
-   /**
-    * The currently dragged Distance in px
-    */
-   draggedDistance: Accessor<number>;
-
-   /**
-    * Size of the drawer element.
-    */
-   drawerSize: Accessor<number>;
-
-   /**
-    * Gives you the current transition style to apply
-    *
-    * @param property CSS property to transition
-    */
-   transition: (property: string) => string;
-}
-
-export const DrawerPublicContext = createContext<DrawerPublicContextValue>();
+export const DrawerPublicContext = createContext<DrawerApi>();
 
 export function usePublicDrawerContext() {
    const context = useContext(DrawerPublicContext);

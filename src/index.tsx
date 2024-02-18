@@ -14,11 +14,24 @@ import {
 
 import {
    usePublicDrawerContext as useDrawerContext,
-   type DrawerPublicContextValue,
 } from "./drawer-context";
 
+export {
+   createDrawer,
+   type DrawerApi,
+   type DrawerProps,
+   type DrawerPrimitive
+} from "./create-drawer";
+
+export {
+   createDrawerOverlay
+} from "./create-drawer-overlay";
+
+export {
+   createDrawerContent
+} from "./create-drawer-content";
+
 export type {
-   DrawerPublicContextValue as DrawerContextValue,
    DrawerRootInterface,
    DrawerContentProps
 }

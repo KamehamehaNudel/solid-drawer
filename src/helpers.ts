@@ -128,8 +128,3 @@ export function isInput(target: Element) {
       (target instanceof HTMLElement && target.isContentEditable)
    );
 }
-
-
-export function debug(msg:any, prefix= 'debug') {
-   document.getElementById('debug')?.append(msg + '____' + prefix + '\n');
-}
