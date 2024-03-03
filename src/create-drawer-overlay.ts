@@ -9,11 +9,10 @@ export function createDrawerOverlay(props: {style?: JSX.CSSProperties}) {
    const hasSnapPoints = () => drawerContext.snapPoints() && drawerContext.snapPoints().length > 2;
 
    const styleOpacity = createMemo(() => {
-      let height = (drawerContext.drawerSize());
+      let height = drawerContext.drawerSize();
+
       if (drawerContext.isDragging()) {
-
          const range = drawerContext.fadeRange();
-
          if (hasSnapPoints()) {
             return getProgressBetweenPoints(drawerContext.snapPointsOffset(), drawerContext.draggedDistance(), range[0], range[1])
          }
@@ -22,7 +21,6 @@ export function createDrawerOverlay(props: {style?: JSX.CSSProperties}) {
 
       } else {
          const range = drawerContext.fadeRange();
-
          if (drawerContext.state() === 'exiting') {
             return 0;
          }
@@ -42,13 +40,18 @@ export function createDrawerOverlay(props: {style?: JSX.CSSProperties}) {
 
    return {
       drawerOverlayProps: {
-         "vaul-overlay": "",
+         get "vaul-overlay"(){
+            return drawerContext.isDisabled() ? 'false' : 'true';
+         },
          get "style"() {
+            if (drawerContext.isDisabled()) {
+               return undefined;
+            }
             return {
                transition: styleTransition(),
                opacity: styleOpacity(),
                ...props.style,
-            }
+            } as JSX.CSSProperties;
          }
       }
    }

@@ -3,6 +3,7 @@ import {TransitionState} from "./create-transition-state";
 import {DrawerApi} from "./create-drawer";
 
 export interface DrawerContextValue {
+   isDisabled: Accessor<boolean>;
    drawerRef: Accessor<HTMLElement | null>;
    setDrawerRef: Setter<HTMLElement | null>;
 

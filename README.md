@@ -20,7 +20,7 @@ https://github.com/KamehamehaNudel/solid-drawer/assets/46644843/d8855fe8-6a4c-4f
 
 ## Quick start
 
-Install it: (not actually published as of now as of now)
+Install it:
 
 ```bash
 npm i solid-drawer
@@ -30,7 +30,42 @@ yarn add solid-drawer
 pnpm add solid-drawer
 ```
 
+Use it:
+
+```tsx
+import {Drawer, useDrawerContext} from 'solid-drawer'
+import {Dialog} from "@kobalte/core";
+
+export default function MyAwesomeDrawer() {
+
+   return (
+      <Drawer.Root>
+         <Dialog.Portal>
+            <Drawer.Overlay/>
+            <Drawer.Content>
+               Hello From the Drawer
+            </Drawer.Content>
+         </Dialog.Portal>
+      </Drawer.Root>
+   )
+}
+```
+
+### New Addition: Primitive functions
+In addition to the exported components. There are now also "primitive" versions of the functionality.
+`createDrawer`
+`createDrawerContent`
+and `createDrawerOverlay`
+
+Use them to turn any Kobalte modal-like content layer (Dialog, Menus, Selects, Popovers) into a drawer.
+`createDrawer` creates the root of the drawer. It returns a `DrawerProvider` you have to wrap your Dialog/Menu/Select etc. with and also `rootProps` you have to apply on the respective Kobalte's Root component.
+For the Content Component you have the use `createDrawerContent` and apply the returned `drawerContentProps` to the respective Content Element.
+
 ## Props
+These are the same between the `Drawer` Component version and the `createDrawer` primitive.
+### `isDisabled`
+*   Type: `boolean | undefined`
+*   Description: Disable the whole drawer logic. Component will behave as if it were a "normal" Dialog. Useful if you want to do drawers conditionally, For example only on small-screen devices
 ### `snapPoints`
 
 *   Type: `(number | string)[] | undefined`
@@ -109,9 +144,3 @@ pnpm add solid-drawer
 *   Parameters:
     *   `event`: Touch or pointer event triggering the release.
     *   `open`: Boolean indicating whether the drawer is open.
-
-Use it:
-
-```tsx
-import solid-drawer from 'solid-drawer'
-```

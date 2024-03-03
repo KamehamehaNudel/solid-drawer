@@ -31,9 +31,13 @@ import {
    reset,
    set
 } from "./helpers";
-import createPreventScroll from "solid-prevent-scroll";
-
 export interface DrawerProps {
+
+   /**
+    * use to conditionally disable all drawer logic.
+    * For example useful when you want to apply drawers only on certain screen-size
+    */
+   isDisabled?: boolean,
 
    /**
     * controlled open state
@@ -137,8 +141,8 @@ export interface DrawerPrimitive {
    rootProps: {
       readonly open: boolean,
       readonly forceMount: boolean,
+      readonly modal?: boolean,
       onOpenChange: (open: boolean) => void,
-      preventScroll: boolean,
    }
 
    /**
@@ -150,7 +154,7 @@ export interface DrawerPrimitive {
 export interface DrawerApi {
 
    /**
-    * TransitionState.
+    * TransitionState of the drawer.
     */
    state: Accessor<TransitionState>
 
@@ -163,6 +167,7 @@ export interface DrawerApi {
     * If currently open
     */
    isOpen: Accessor<boolean>
+
    /**
     * Close the drawer
     */
@@ -205,6 +210,7 @@ export function createDrawer(props: DrawerProps): DrawerPrimitive {
 
    props = mergeDefaultProps(
       {
+         isDisabled: false,
          nested: false,
          nestedLevel: 0,
          closeThreshold: CLOSE_THRESHOLD as number,
@@ -241,6 +247,7 @@ export function createDrawer(props: DrawerProps): DrawerPrimitive {
    }
 
    const [local, others] = splitProps(props, [
+      'isDisabled',
       'activeSnapPoint',
       'setActiveSnapPoint',
       'open',
@@ -257,7 +264,6 @@ export function createDrawer(props: DrawerProps): DrawerPrimitive {
       'defaultSnapPoint',
       'fadeRange',
       'nestedLevel',
-      'preventScroll',
       'closeThreshold',
    ])
 
@@ -693,9 +699,8 @@ export function createDrawer(props: DrawerProps): DrawerPrimitive {
       local.onRelease?.(event, true);
    }
 
-   console.log(local.modal)
-
    const context: DrawerContextValue = {
+      isDisabled: () => !!local.isDisabled,
       visible,
       setVisible,
       state: openState,
@@ -726,14 +731,6 @@ export function createDrawer(props: DrawerProps): DrawerPrimitive {
       nestedState,
    }
 
-   /**
-    * We use our own preventScroll because kobalte's is bugged on ios
-    */
-   createPreventScroll({
-      element: () => drawerRef(),
-      enabled: () => local.preventScroll !== false && openState() !== 'exited',
-   })
-
    const DrawerProvider: FlowComponent = (props) => {
       return createComponent(DrawerContext.Provider, {
          value: context,
@@ -750,6 +747,9 @@ export function createDrawer(props: DrawerProps): DrawerPrimitive {
       get forceMount() {
          return openState() !== 'exited'
       },
+      get modal() {
+         return local.modal;
+      },
       onOpenChange: (o: boolean) => {
          if (local.open !== undefined) {
             local.onOpenChange?.(o);
@@ -761,7 +761,6 @@ export function createDrawer(props: DrawerProps): DrawerPrimitive {
             disclosureState.close();
          }
       },
-      preventScroll: false,
    }
 
    return {

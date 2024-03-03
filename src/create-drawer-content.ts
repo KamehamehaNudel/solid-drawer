@@ -96,24 +96,26 @@ export function createDrawerContent(props: DrawerContentProps, ref: Accessor<HTM
 
    /* assign directly to ref, as layer-stack/dismissible logic doesn't allow for pointer events on DialogContent */
    createEffect(() => {
-      if (!drawerContext.drawerRef()) return;
+      const drawerRef = drawerContext.drawerRef();
 
-      drawerContext.drawerRef()?.addEventListener('pointerdown', drawerContext.onPress);
-      drawerContext.drawerRef()?.addEventListener('pointermove', drawerContext.onDrag);
-      drawerContext.drawerRef()?.addEventListener('pointerup', onPointerUp);
+      if (!drawerRef || drawerContext.isDisabled()) return;
 
-      drawerContext.drawerRef()?.addEventListener('touchstart', onTouchStart);
-      drawerContext.drawerRef()?.addEventListener('touchmove', drawerContext.onDrag);
-      drawerContext.drawerRef()?.addEventListener('touchend', drawerContext.onRelease);
+      drawerRef.addEventListener('pointerdown', drawerContext.onPress);
+      drawerRef.addEventListener('pointermove', drawerContext.onDrag);
+      drawerRef.addEventListener('pointerup', onPointerUp);
+
+      drawerRef.addEventListener('touchstart', onTouchStart);
+      drawerRef.addEventListener('touchmove', drawerContext.onDrag);
+      drawerRef.addEventListener('touchend', drawerContext.onRelease);
 
       onCleanup(() => {
-         drawerContext.drawerRef()?.removeEventListener('pointerdown', drawerContext.onPress);
-         drawerContext.drawerRef()?.removeEventListener('pointermove', drawerContext.onDrag);
-         drawerContext.drawerRef()?.removeEventListener('pointerup', onPointerUp);
+         drawerRef.removeEventListener('pointerdown', drawerContext.onPress);
+         drawerRef.removeEventListener('pointermove', drawerContext.onDrag);
+         drawerRef.removeEventListener('pointerup', onPointerUp);
 
-         drawerContext.drawerRef()?.removeEventListener('touchstart', onTouchStart);
-         drawerContext.drawerRef()?.removeEventListener('touchmove', drawerContext.onDrag);
-         drawerContext.drawerRef()?.removeEventListener('touchend', drawerContext.onRelease);
+         drawerRef.removeEventListener('touchstart', onTouchStart);
+         drawerRef.removeEventListener('touchmove', drawerContext.onDrag);
+         drawerRef.removeEventListener('touchend', drawerContext.onRelease);
       })
    })
 
@@ -128,7 +130,6 @@ export function createDrawerContent(props: DrawerContentProps, ref: Accessor<HTM
       drawerContentProps: {
          onPointerDownOutside: (e: PointerDownOutsideEvent) => {
             props.onPointerDownOutside?.(e);
-            console.log(drawerContext.modal())
             if (!drawerContext.modal()) {
                e.preventDefault();
                return;
@@ -143,6 +144,9 @@ export function createDrawerContent(props: DrawerContentProps, ref: Accessor<HTM
             drawerContext.close();
          },
          get style() {
+            if (drawerContext.isDisabled()) {
+               return undefined;
+            }
             return {
                '--visible-height': `${visibleHeight()}px`,
                '--snap-point-height': drawerContext.snapPointsOffset() && drawerContext.snapPointsOffset().length > 0 ? `${drawerContext.snapPointsOffset()[drawerContext.activeSnapPoint()]}px` : undefined,
@@ -152,11 +156,13 @@ export function createDrawerContent(props: DrawerContentProps, ref: Accessor<HTM
                ...props.style,
             } as JSX.CSSProperties
          },
-         "vaul-drawer": "",
+         get "vaul-drawer"() {
+            return !drawerContext.isDisabled() ? '' : undefined;
+         },
          get "vaul-drawer-visible"() {
             return drawerContext.visible() ? 'true': 'false'
          },
-         get "data-state"() {
+         get "vaul-state"() {
             return drawerContext.state()
          },
          get "vaul-dragging"() {
