@@ -1,6 +1,6 @@
 {
   "name": "solid-drawer",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "A Headless Drawer component built on top of Kobalte. It is based in part on emilkowalski's vaul react library.",
   "license": "MIT",
   "author": "KamehamehaNudel",
