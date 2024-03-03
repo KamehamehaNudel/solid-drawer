@@ -6,16 +6,15 @@
 
 [![pnpm](https://img.shields.io/badge/maintained%20with-pnpm-cc00ff.svg?style=for-the-badge&logo=pnpm)](https://pnpm.io/)
 
-This library is a port of https://github.com/emilkowalski/vaul for solid JS.\
-Instead of radix it is built on top of the kobalte https://github.com/kobaltedev/kobalte/ libraries dialog component.\
+Solid-Drawer is an fully featured Headless Drawer Component.
+
+It is, at its core, a port of https://github.com/emilkowalski/vaul for solid JS.\
+It is built on top of the kobalte https://github.com/kobaltedev/kobalte/ libraries Dialog primitive.\
 The "vaul" library has been modified to utilize solids fine grained reactivity vs. relying on direct style-manipulation of a ref.
 
 ## Showcase
 
-
-
 https://github.com/KamehamehaNudel/solid-drawer/assets/46644843/d8855fe8-6a4c-4f12-9d31-5a8bec587be6
-
 
 
 ## Quick start
@@ -30,20 +29,29 @@ yarn add solid-drawer
 pnpm add solid-drawer
 ```
 
-Use it:
+Use it in your App:
 
 ```tsx
-import {Drawer, useDrawerContext} from 'solid-drawer'
-import {Dialog} from "@kobalte/core";
+import { Drawer } from 'solid-drawer'
+import { Dialog } from '@kobalte/core'
 
-export default function MyAwesomeDrawer() {
+function MyDrawer() {
 
    return (
       <Drawer.Root>
+         <Dialog.Trigger>
+            Open
+         </Dialog.Trigger>
          <Dialog.Portal>
             <Drawer.Overlay/>
-            <Drawer.Content>
-               Hello From the Drawer
+            <Drawer.Content class="my-drawer-content">
+               <Dialog.Title>My Solid-Drawer Headline</Dialog.Title>
+               <Dialog.CloseButton>
+                  Close
+               </Dialog.CloseButton>
+               <Dialog.Description>
+                  My Solid-Drawer Content
+               </Dialog.Description>
             </Drawer.Content>
          </Dialog.Portal>
       </Drawer.Root>
